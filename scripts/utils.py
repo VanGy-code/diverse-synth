@@ -70,7 +70,3 @@ def save_checkpoints(epoch, model, optimizer, experiment_directory):
         optimizer.state_dict(),
         f"{experiment_directory}/opt_{epoch}"
     )
-
-
-if __name__ == '__main__':
-    print(id_generator(9))

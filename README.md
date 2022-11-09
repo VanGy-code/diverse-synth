@@ -13,9 +13,9 @@ Our code has the following dependencies:
 - trimesh
 - tqdm
 - matlab
-- cleanfid
+- [cleanfid](https://pypi.org/project/clean-fid/)
 - scipy
-- wandb
+- [wandb](https://wandb.ai/site)
 - simple-3dviz
 
 ## Dataset
@@ -50,29 +50,24 @@ code: 450
 
 ### Preprocess
 
+pickle all furniture model file:
+
+```python
+python pickle_future_data.py
+```
+
 - bedroom
     ```python
     xpy preprocess_data.py --annotation_file ../config/bedroom_threed_front_splits.csv --dataset_filtering bedroom --render
-    ```
-
-    ```python
-    python pickle_future_data.py --annotation_file ../config/bedroom_threed_front_splits.csv --dataset_filtering bedroom
     ```
 - livingroom
     ```python
     xpy preprocess_data.py --annotation_file ../config/livingroom_threed_front_splits.csv --dataset_filtering livingroom --render
     ```
-    ```python
-    python pickle_future_data.py --annotation_file ../config/library_threed_front_splits.csv --dataset_filtering library
-    ```
 - diningroom
     ```python
     xpy preprocess_data.py  --annotation_file ../config/diningroom_threed_front_splits.csv --dataset_filtering diningroom --render
     ```
-    ```python
-    python pickle_future_data.py --annotation_file ../config/diningroom_threed_front_splits.csv --dataset_filtering diningroom
-    ```
-
 ## Network
 
 ### Train
