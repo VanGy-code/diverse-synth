@@ -402,8 +402,8 @@ def filter_function(config, split=None, without_lamps=False):
     if "bedroom" in config["room_type_filter"]:
         return BaseDataset.filter_compose(
             BaseDataset.with_room("bed"),
-            BaseDataset.at_least_boxes(3),
-            BaseDataset.at_most_boxes(13),
+            BaseDataset.at_least_boxes(1),
+            BaseDataset.at_most_boxes(15),
             BaseDataset.with_object_types(
                 list(THREED_FRONT_FURNITURE.values())
             ),
@@ -424,7 +424,7 @@ def filter_function(config, split=None, without_lamps=False):
     elif "livingroom" in config["room_type_filter"]:
         return BaseDataset.filter_compose(
             BaseDataset.with_room("living"),
-            BaseDataset.at_least_boxes(3),
+            BaseDataset.at_least_boxes(1),
             BaseDataset.at_most_boxes(21),
             BaseDataset.with_object_types(
                 list(THREED_FRONT_FURNITURE.values())
@@ -446,7 +446,7 @@ def filter_function(config, split=None, without_lamps=False):
     elif "diningroom" in config["room_type_filter"]:
         return BaseDataset.filter_compose(
             BaseDataset.with_room("dining"),
-            BaseDataset.at_least_boxes(3),
+            BaseDataset.at_least_boxes(1),
             BaseDataset.at_most_boxes(21),
             BaseDataset.with_object_types(
                 list(THREED_FRONT_FURNITURE.values())
@@ -469,7 +469,7 @@ def filter_function(config, split=None, without_lamps=False):
     elif "library" in config["room_type_filter"]:
         return BaseDataset.filter_compose(
             BaseDataset.with_room("library"),
-            BaseDataset.at_least_boxes(3),
+            BaseDataset.at_least_boxes(1),
             BaseDataset.with_object_types(
                 list(THREED_FRONT_FURNITURE.values())
             ),

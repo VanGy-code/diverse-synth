@@ -6,10 +6,12 @@ THREED_FRONT_FURNITURE = {
     "nightstand": "nightstand", # 1
     'double bed': "bed", # 2
     'bed frame': "bed", # 2
+    'bunk bed': "bed", # 2
     "king-size bed": "bed", # 2
     "single bed": "bed", # 2
     "kids bed": "bed", # 2
     "bunk bed": "bed", # 2
+    "couch bed": "bed", # 2
     "wardrobe": "wardrobe", # 3
     "bookcase/jewelry armoire": "shelf", # 4
     "shelf": "shelf", # 4
@@ -17,6 +19,7 @@ THREED_FRONT_FURNITURE = {
     "lounge chair/cafe chair/office chair": "chair", # 6
     'lounge chair/book-chair/computer chair': "chair", # 6
     "armchair": "chair", # 6
+    "hanging chair": "chair", # 6
     'folding chair': 'chair', # 6
     "classic chinese chair": "classic_chair", # 7
     "dining chair": "dining_chair", # 8
@@ -43,10 +46,12 @@ THREED_FRONT_FURNITURE = {
     "three-seat/multi-seat sofa": "sofa", # 20
     "three-seat/multi-person sofa": "sofa", # 20
     "l-shaped sofa": "sofa", # 20
+    "u-shaped sofa": "sofa", # 20
     "lazy sofa": "sofa", # 20
     "chaise longue sofa": "sofa", # 20
     'couch bed': 'sofa', # 20
     'floor lamp': 'floor_lamp', # 21
+    'wall lamp': 'lamp', #21
     "ceiling lamp": "lamp", # 22
     "pendant lamp": "lamp", # 22
 }

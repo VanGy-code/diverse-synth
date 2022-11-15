@@ -1,6 +1,7 @@
 dump/
 .ipynb_checkpoints/
 .vscode/
+*__pycache__
 savepoint/
 output/
 
