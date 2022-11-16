@@ -15,7 +15,7 @@ data:
 
 training:
     splits: ["train", "val"]
-    tag: "bedroom_ebvae_h32_mss"
+    tag: "bedroom_ebvae_h32_mss_pen2"
     checkpoint_dir: "../savepoint/"
     epochs: 1000
     batch_size: 64
@@ -28,7 +28,7 @@ training:
 validation:
     splits: ["test"]
     frequency: 5
-    batch_size: 16
+    batch_size: 64
     
 generate:
     output_path: '../output/'
