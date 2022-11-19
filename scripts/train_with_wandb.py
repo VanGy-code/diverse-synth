@@ -23,7 +23,7 @@ def main(argv):
 
     parser.add_argument(
         "--config_file",
-        default="../config/bedroom_train_config.yaml",
+        default="../config/bedroom_config.yaml",
         help="Path to the file that contains the experiment configuration"
     )
     parser.add_argument(
@@ -116,7 +116,7 @@ def main(argv):
         os.makedirs(experiment_directory)
 
     # Create dataset
-    train_dataset = get_encoded_dataset(
+    dataset = get_encoded_dataset(
         config["data"],
         filter_function(
             config["data"],
@@ -125,57 +125,72 @@ def main(argv):
         path_to_bounds=None,
         split=config["training"].get("splits", ["train", "val"])
     )
+    train_size = int(len(dataset) * 0.7)
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
 
     train_loader = DataLoader(
         train_dataset,
         batch_size=config["training"].get("batch_size", 16),
         num_workers=args.n_processes,
-        worker_init_fn=train_dataset.worker_init_fn,
+        worker_init_fn=dataset.worker_init_fn,
         shuffle=True,
         pin_memory=True,
         drop_last=True
     )
-
-    print("Loaded {} training scenes with {} object types".format(
-        len(train_dataset), train_dataset.num_class)
+    
+    print("Loaded {} training scenes".format(
+        len(train_dataset))
     )
-    print("Training set has {} bounds".format(train_dataset.bounds))
+    
+    # print(train_dataset.num_class)
+    # print("Loaded {} training scenes with {} object types".format(
+    #     len(train_dataset), train_dataset.num_class)
+    # )
+    # print("Training set has {} bounds".format(train_dataset.bounds))
 
-    path_to_bounds = os.path.join(experiment_directory, "bounds.npz")
-    np.savez(
-        path_to_bounds,
-        sizes=train_dataset.bounds["sizes"],
-        translations=train_dataset.bounds["translations"],
-        angles=train_dataset.bounds["angles"]
-    )
-    print("Saved the dataset bounds in {}".format(path_to_bounds))
+    # path_to_bounds = os.path.join(experiment_directory, "bounds.npz")
+    # np.savez(
+    #     path_to_bounds,
+    #     sizes=train_dataset.bounds["sizes"],
+    #     translations=train_dataset.bounds["translations"],
+    #     angles=train_dataset.bounds["angles"]
+    # )
+    # print("Saved the dataset bounds in {}".format(path_to_bounds))
 
-    validation_dataset = get_encoded_dataset(
-        config["data"],
-        filter_function(
-            config["data"],
-            split=config["validation"].get("splits", ["test"])
-        ),
-        path_to_bounds=path_to_bounds,
-        split=config["validation"].get("splits", ["test"])
-    )
+    # validation_dataset = get_encoded_dataset(
+    #     config["data"],
+    #     filter_function(
+    #         config["data"],
+    #         split=config["validation"].get("splits", ["test"])
+    #     ),
+    #     path_to_bounds=path_to_bounds,
+    #     split=config["validation"].get("splits", ["test"])
+    # )
 
     val_loader = DataLoader(
-        validation_dataset,
+        # validation_dataset,
+        test_dataset,
         batch_size=config["validation"].get("batch_size", 16),
         num_workers=args.n_processes,
-        worker_init_fn=validation_dataset.worker_init_fn,
+        worker_init_fn=dataset.worker_init_fn,
+        # worker_init_fn=validation_dataset.worker_init_fn,
         shuffle=False,
         pin_memory=True,
         drop_last=True
     )
-
-    print("Loaded {} validation scenes with {} object types".format(
-        len(validation_dataset), validation_dataset.num_class)
+    
+    
+    print("Loaded {} validation scenes".format(
+        len(test_dataset))
     )
-    print("Validation set has {} bounds".format(validation_dataset.bounds))
 
-    assert train_dataset.class_labels == validation_dataset.class_labels
+    # print("Loaded {} validation scenes with {} object types".format(
+    #     len(validation_dataset), validation_dataset.num_class)
+    # )
+    # print("Validation set has {} bounds".format(validation_dataset.bounds))
+
+    # assert train_dataset.class_labels == validation_dataset.class_labels
 
     # ================= Step2 : Build Network =======================
     # Build the network architecture to be used for training
@@ -326,7 +341,6 @@ def main(argv):
 
             # Forward pass
             inputs_abs = batch_data_label['x_abs']
-
             labels_abs = batch_data_label['x_abs']
             labels_rel = batch_data_label['x_rel']
 

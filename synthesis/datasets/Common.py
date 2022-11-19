@@ -165,13 +165,19 @@ class BaseDataset(Dataset):
     """
 
     @staticmethod
-    def with_room(scene_type):
+    def with_room(scene_types):
         """
         Filter type of room
         """
 
         def inner(scene):
-            return scene if scene_type in scene.scene_type else False
+            # return scene if scene_type in scene.scene_type else False
+            
+            for scene_type in scene_types:
+                if scene_type in scene.scene_type:
+                    return scene
+            
+            return False
 
         return inner
 
@@ -381,8 +387,8 @@ class BaseDataset(Dataset):
         return s
 
 def filter_function(config, split=None, without_lamps=False):
-    if split is None:
-        split = ["train", "val"]
+    # if split is None:
+    #     split = ["train", "val"]
     print("Applying {} filtering".format(config["room_type_filter"]))
     if config["room_type_filter"] == "no_filtering":
         return lambda s: s
@@ -396,13 +402,13 @@ def filter_function(config, split=None, without_lamps=False):
         invalid_bbox_jids = set(l.strip() for l in f)
 
     # Make the train/test/validation splits
-    splits_builder = CSVSplitsBuilder(config["annotation_file"])
-    split_scene_ids = splits_builder.get_splits(split)
+    # splits_builder = CSVSplitsBuilder(config["annotation_file"])
+    # split_scene_ids = splits_builder.get_splits(split)
 
     if "bedroom" in config["room_type_filter"]:
         return BaseDataset.filter_compose(
-            BaseDataset.with_room("bed"),
-            BaseDataset.at_least_boxes(1),
+            BaseDataset.with_room(["bedroom", "elderlyroom", "nannyroom", "kidsroom"]),
+            BaseDataset.at_least_boxes(2),
             BaseDataset.at_most_boxes(15),
             BaseDataset.with_object_types(
                 list(THREED_FRONT_FURNITURE.values())
@@ -419,12 +425,12 @@ def filter_function(config, split=None, without_lamps=False):
                 ["lamp"]
                 if without_lamps else [""]
             ),
-            BaseDataset.with_scene_ids(split_scene_ids)
+            # BaseDataset.with_scene_ids(split_scene_ids)
         )
     elif "livingroom" in config["room_type_filter"]:
         return BaseDataset.filter_compose(
-            BaseDataset.with_room("living"),
-            BaseDataset.at_least_boxes(1),
+            BaseDataset.with_room(["living"]),
+            BaseDataset.at_least_boxes(2),
             BaseDataset.at_most_boxes(21),
             BaseDataset.with_object_types(
                 list(THREED_FRONT_FURNITURE.values())
@@ -441,12 +447,12 @@ def filter_function(config, split=None, without_lamps=False):
             BaseDataset.without_box_types(
                 ["bed"]
             ),
-            BaseDataset.with_scene_ids(split_scene_ids)
+            # BaseDataset.with_scene_ids(split_scene_ids)
         )
     elif "diningroom" in config["room_type_filter"]:
         return BaseDataset.filter_compose(
-            BaseDataset.with_room("dining"),
-            BaseDataset.at_least_boxes(1),
+            BaseDataset.with_room(["dining", "lounge", "kitchen"]),
+            BaseDataset.at_least_boxes(2),
             BaseDataset.at_most_boxes(21),
             BaseDataset.with_object_types(
                 list(THREED_FRONT_FURNITURE.values())
@@ -458,18 +464,18 @@ def filter_function(config, split=None, without_lamps=False):
             BaseDataset.floor_plan_with_limits(12, 12, axis=[0, 2]),
             BaseDataset.contains_object_types(["dining_chair", "dinging_table"]),
             BaseDataset.without_box_types(
-                ["lamp", "dining_table"]
+                ["lamp"]
                 if without_lamps else [""]
             ),
             BaseDataset.without_box_types(
                 ["bed"]
             ),
-            BaseDataset.with_scene_ids(split_scene_ids)
+            # BaseDataset.with_scene_ids(split_scene_ids)
         )
     elif "library" in config["room_type_filter"]:
         return BaseDataset.filter_compose(
-            BaseDataset.with_room("library"),
-            BaseDataset.at_least_boxes(1),
+            BaseDataset.with_room(["library"]),
+            BaseDataset.at_least_boxes(2),
             BaseDataset.with_object_types(
                 list(THREED_FRONT_FURNITURE.values())
             ),
@@ -488,7 +494,7 @@ def filter_function(config, split=None, without_lamps=False):
             BaseDataset.without_box_types(
                 ["bed"]
             ),
-            BaseDataset.with_scene_ids(split_scene_ids)
+            # BaseDataset.with_scene_ids(split_scene_ids)
         )
     else:
         return lambda s: s if len(s.bboxes) > 0 else False

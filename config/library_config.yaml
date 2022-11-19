@@ -3,7 +3,6 @@ data:
     room_type: "library"
     encoding_type: "cached"
     dataset_directory: "../dump/library"
-    annotation_file: "../config/library_threed_front_splits.csv"
     room_type_filter: "no_filtering"
     train_stats: "dataset_stats.txt"
     room_layout_size: "256,256"

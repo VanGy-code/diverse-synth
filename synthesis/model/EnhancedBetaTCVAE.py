@@ -359,7 +359,7 @@ class EnhancedBetaTCVAE(BaseVAE):
         self.alpha = 1.0
         self.beta = 6.
         self.gamma = 1.
-        self.anneal_steps = 5000
+        self.anneal_steps = 6600
         self.num_iter = 0
 
         self.is_mss = True
@@ -490,7 +490,7 @@ class EnhancedBetaTCVAE(BaseVAE):
         # reduction = 'mean' or 'sum'
 
         class_reconstruct_loss = self.huber_loss(reconstruct_class_new, ground_truth_class) * (x_dim - 9)
-        loss_dict['class_reconstruct_loss'] = class_reconstruct_loss
+        loss_dict['class_reconstruct_loss'] = class_reconstruct_loss * 10
 
         # Furniture Angle reconstruct loss(Cross Entropy Loss + Huber Loss)
         reconstruct_angle = reconstruct_match[:, :9]

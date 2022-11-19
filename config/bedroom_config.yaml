@@ -3,7 +3,6 @@ data:
     room_type: "bedroom"
     encoding_type: "cached"
     dataset_directory: "../dump/bedroom"
-    annotation_file: "../config/bedroom_threed_front_splits.csv"
     room_type_filter: "no_filtering"
     train_stats: "dataset_stats.txt"
     room_layout_size: "256,256"
@@ -15,7 +14,7 @@ data:
 
 training:
     splits: ["train", "val"]
-    tag: "bedroom_ebvae_h32_mss_pen2"
+    tag: "bedroom_ebvae_h32_mss_pen4"
     checkpoint_dir: "../savepoint/"
     epochs: 1000
     batch_size: 64
@@ -37,7 +36,7 @@ EnhancedBetaTCVAE:
     input_dim: 16
     latent_dimension: 32
     bn_momentum: 0.0005
-    kld_weight: 0.0001
+    kld_weight: 0.0025
     kld_interval: 50
     sparse_num: 4
 

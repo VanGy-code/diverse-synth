@@ -572,7 +572,7 @@ class UNet3Plus(BaseUNet):
                         num_unrelated + 1e-12) * 0.1
         else:
             loss_dict['distance_class_loss'] = ((error_translation_class_x + error_translation_class_y) / (
-                    num_related + 1e-12))
+                    num_related + 1e-12)) * 0.1
 
         loss_dict['distance_indicator_loss'] = ((error_indicator_x + error_indicator_y) / (num_unrelated + 1e-12))
 

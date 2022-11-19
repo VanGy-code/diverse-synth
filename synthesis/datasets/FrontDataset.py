@@ -29,12 +29,9 @@ def get_raw_dataset(
     dataset_type = config["dataset_type"]
     if "cached" in dataset_type:
         # Make the train/test/validation splits
-        splits_builder = CSVSplitsBuilder(config["annotation_file"])
-        split_scene_ids = splits_builder.get_splits(split)
         dataset = CachedFront(
             config["dataset_directory"],
             config=config,
-            scene_ids=split_scene_ids
         )
     else:
         dataset = Front.load_dataset(
@@ -412,26 +409,6 @@ class DatasetDiscrete(CachedDataset):
         return angle
 
     @staticmethod
-    def translation2disc_(tij, size_i, size_j, half_range, interval):
-        indicator_ij = (tij > 0)
-
-        dummy = tij.copy()
-        for i, item in enumerate(dummy):
-            for j, data in enumerate(item):
-                if data[0] > 0:
-                    data[0] -= (size_i[i][0] + size_j[j][0])
-                    np.maximum(data[0], 0)
-                else:
-                    data[0] += (size_i[i][0] + size_j[j][0])
-                    np.minimum(data[0], 0)
-
-        class_id = np.minimum(np.abs(dummy), interval - 1e-8) // interval
-
-        residual = np.abs(dummy) - class_id * interval
-
-        return indicator_ij.astype(np.float32), class_id.astype(np.int), residual
-
-    @staticmethod
     def translation2disc(tij, half_range, interval):
 
         Iij = (tij > 0)
@@ -464,7 +441,7 @@ class DatasetDiscrete(CachedDataset):
         for i in range(n):
             if len(x_rel[i]) > 0:
                 for j, v in x_rel[i].items():
-                    x_rel_np[i, j, :] = v
+                    x_rel_np[i, j, :] = x_rel[i][j]
 
         x_abs_sep = np.zeros((n, 16))  # 8 + 1 + 3 + 3 + 1 = 9
         for i, x_abs in enumerate(x_abs):

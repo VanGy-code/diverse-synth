@@ -205,7 +205,7 @@ class FutureModel(BaseFutureModel):
 
         if np.sum(axis) == 0 or np.isnan(theta):
             return 0
-
+        
         assert np.dot(axis, [1, 0, 1]) == 0
         assert 0 <= theta <= 2 * np.pi
 

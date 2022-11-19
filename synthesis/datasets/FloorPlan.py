@@ -441,6 +441,17 @@ class FloorPlan:
 
     def _get_front_door(self):
         raise NotImplementedError
+    
+    def _point_sort(self, l):
+        if len(l) <= 1:
+            return l
+        mid = l[0]
+        low = [item for item in l if item < mid]
+        high = [item for item in l if item > mid]
+        return self._point_sort(low) + [mid] + self._point_sort(high)
+
+    def _dist2(self, p1, p2):
+        return (p1[0] - p2[0]) ** 2 + (p1[2] - p2[2]) ** 2
 
     def _get_exterior_boundary(self):
         real_points = np.array(self.vertices.tolist())
@@ -605,10 +616,10 @@ class FloorPlan:
     def to_dict(self, floor_plan_only=True, xyxy=True):
         return {
             'name': self.scene_id,
-            'type': np.array([], dtype=int) if floor_plan_only else self.furniture[:, -1].astype(int),
+            'type': np.array([], dtype=int) if floor_plan_only else self.furniture[:, -1].astype(int) if self.furniture is not None else np.array([], dtype=int),
             'boundary': self.exterior_boundary[:, [2, 1, 0, 3]].astype(float),
-            'boxes': np.array([], dtype=int) if floor_plan_only else self.furniture.astype(float),
-            'lamps': np.array([], dtype=int) if floor_plan_only else self.lamps.astype(float),
-            'edges': np.array([], dtype=int) if floor_plan_only else self.edges.astype(int),
+            'boxes': np.array([], dtype=int) if floor_plan_only else self.furniture.astype(float) if self.furniture is not None else np.array([], dtype=int),
+            'lamps': np.array([], dtype=int) if floor_plan_only else self.lamps.astype(float) if self.lamps is not None else np.array([], dtype=int),
+            'edges': np.array([], dtype=int) if floor_plan_only else self.edges.astype(int) if self.edges is not None else np.array([], dtype=int),
             'colors': np.array([], dtype=int) if floor_plan_only else np.array(self.color_maps).astype(float)
         }

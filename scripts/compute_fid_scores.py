@@ -65,11 +65,6 @@ def main(argv):
         default="/data/render_scene/scene-synth",
         help="Path to the folder containing the synthesized"
     )
-    parser.add_argument(
-        "--path_to_annotations",
-        default="../config/bedroom_threed_front_splits.csv",
-        help="Path to the folder containing the annotations"
-    )
     
     parser.add_argument(
         "--output_directory",

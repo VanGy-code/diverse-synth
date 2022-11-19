@@ -102,7 +102,7 @@ def main(argv):
 
     parser.add_argument(
         "--output_directory",
-        default="/media/vangy/work/render_scene/scene-synth",
+        default="/data/render_scene/diverse-synth",
         help="path to the output directory"
     )
 
@@ -131,12 +131,6 @@ def main(argv):
     )
 
     parser.add_argument(
-        "--path_to_floor_path",
-        default='../dump/threed_front_bedroom/7d8f9ace-5704-4689-b135-4ece5fb32467_SecondBedroom-45070',
-        help="Path to floor mesh"
-    )
-
-    parser.add_argument(
         "--threed_front_dataset_directory",
         default=f'/dataset/3D-FRONT/3D-FRONT/',
         help="Path to the 3D-FRONT dataset"
@@ -161,11 +155,6 @@ def main(argv):
         "--path_to_invalid_bbox_jids",
         default="../config/black_list.txt",
         help="Path to objects that ae blacklisted"
-    )
-    parser.add_argument(
-        "--annotation_file",
-        default="../config/bedroom_threed_front_splits.csv",
-        help="Path to the train/test splits file"
     )
 
     parser.add_argument(
@@ -232,7 +221,7 @@ def main(argv):
         "max_n_boxes": -1,
         "path_to_invalid_scene_ids": args.path_to_invalid_scene_ids,
         "path_to_invalid_bbox_jids": args.path_to_invalid_bbox_jids,
-        "annotation_file": args.annotation_file
+        # "annotation_file": args.annotation_file
     }
 
     if torch.cuda.is_available():
@@ -249,8 +238,6 @@ def main(argv):
         os.makedirs(f"{args.output_directory}/{args.tag}")
 
     plt_render = FloorPlanRenderer()
-    fp = FloorPlan(file_path=args.path_to_floor_path)
-
 
     object_dataset = FutureDataset.from_pickled_dataset(args.furniture_path)
 
@@ -289,10 +276,10 @@ def main(argv):
                 continue
             fp = FloorPlan(file_path=f"{args.scene_path}/{args.room_type}/{current_room.uid}")
         except Exception as e:
+            print(e)
             continue
-
         room_json = {}
-        if os.path.exists(f"{args.output_directory}/{args.tag}/raw_data") is False:
+        if not os.path.exists(f"{args.output_directory}/{args.tag}/raw_data"):
             os.mkdir(f"{args.output_directory}/{args.tag}/raw_data")
 
         data = np.load(f"{args.scene_path}/{args.room_type}/{current_room.uid}/boxes.npz")
@@ -305,7 +292,7 @@ def main(argv):
 
         '''render only furniture'''
         if args.render:
-            if os.path.exists(f"{args.output_directory}/{args.tag}/furniture_only") is False:
+            if not os.path.exists(f"{args.output_directory}/{args.tag}/furniture_only"):
                 os.mkdir(f"{args.output_directory}/{args.tag}/furniture_only")
             path_to_image = "{}/{}/furniture_only/{}".format(
                 args.output_directory,
@@ -328,7 +315,7 @@ def main(argv):
 
         '''render floor plan with furniture'''
         if args.render:
-            if os.path.exists(f"{args.output_directory}/{args.tag}/complete_scene") is False:
+            if not os.path.exists(f"{args.output_directory}/{args.tag}/complete_scene"):
                 os.mkdir(f"{args.output_directory}/{args.tag}/complete_scene")
             path_to_image = "{}/{}/complete_scene/{}".format(
                 args.output_directory,
@@ -356,17 +343,17 @@ def main(argv):
         room_json['mesh'] = [mesh]
         room_json['scene'] = [room_params]
         file_path = f"{args.output_directory}/{args.tag}/renderable_scene/{i}"
-        if os.path.exists(f"{args.output_directory}/{args.tag}/renderable_scene") is False:
+        if not os.path.exists(f"{args.output_directory}/{args.tag}/renderable_scene"):
             os.mkdir(f"{args.output_directory}/{args.tag}/renderable_scene")
-        if os.path.exists(f"{args.output_directory}/{args.tag}/renderable_scene/{i}") is False:
+        if not os.path.exists(f"{args.output_directory}/{args.tag}/renderable_scene/{i}"):
             os.mkdir(f"{args.output_directory}/{args.tag}/renderable_scene/{i}")
         json_str = json.dumps(room_json, indent=4)
         with open(f'{file_path}/house.json', 'w') as json_file:
             json_file.write(json_str)
 
-        if os.path.exists(f"{args.output_directory}/{args.tag}/renderable_scene/{i}/raw") is False:
+        if not os.path.exists(f"{args.output_directory}/{args.tag}/renderable_scene/{i}/raw"):
             os.mkdir(f"{args.output_directory}/{args.tag}/renderable_scene/{i}/raw")
-        if os.path.exists(f"{args.output_directory}/{args.tag}/renderable_scene/{i}/transform") is False:
+        if not os.path.exists(f"{args.output_directory}/{args.tag}/renderable_scene/{i}/transform"):
             os.mkdir(f"{args.output_directory}/{args.tag}/renderable_scene/{i}/transform")
         try:
             export_scene(f"{file_path}/transform", model_list, boxes, is_transfered=True)

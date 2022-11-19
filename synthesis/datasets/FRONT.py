@@ -161,11 +161,14 @@ class Front(BaseDataset):
             path_to_models,
             path_to_room_masks_dir
         )
+        # print(set([s.scene_type for s in scenes])) 
         results = [s for i, s in enumerate(tqdm(scenes)) if room_type_filter(s)]
+        # print(set([s.scene_type for s in results]))
+        
         return cls(results, bounds=None)
 
 class CachedFront(Front):
-    def __init__(self, base_dir, config, scene_ids):
+    def __init__(self, base_dir, config):
         self._base_dir = base_dir
         self.config = config
 
@@ -174,7 +177,7 @@ class CachedFront(Front):
         self._tags = sorted([
             oi
             for oi in os.listdir(self._base_dir)
-            if oi.split("_")[1] in scene_ids
+            if "dataset_stats.txt" not in oi
         ])
 
         self._path_to_rooms = sorted([

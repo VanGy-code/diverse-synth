@@ -164,11 +164,11 @@ def main(argv):
         default="../config/black_list.txt",
         help="Path to objects that ae blacklisted"
     )
-    parser.add_argument(
-        "--annotation_file",
-        default="../config/bedroom_threed_front_splits.csv",
-        help="Path to the train/test splits file"
-    )
+    # parser.add_argument(
+    #     "--annotation_file",
+    #     default="../config/bedroom_threed_front_splits.csv",
+    #     help="Path to the train/test splits file"
+    # )
 
     parser.add_argument(
         "--weight_file",
@@ -257,7 +257,7 @@ def main(argv):
         "max_n_boxes": -1,
         "path_to_invalid_scene_ids": args.path_to_invalid_scene_ids,
         "path_to_invalid_bbox_jids": args.path_to_invalid_bbox_jids,
-        "annotation_file": args.annotation_file
+        # "annotation_file": args.annotation_file
     }
 
     if torch.cuda.is_available():
