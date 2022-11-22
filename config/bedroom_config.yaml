@@ -14,7 +14,7 @@ data:
 
 training:
     splits: ["train", "val"]
-    tag: "bedroom_ebvae_h32_mss_pen4"
+    tag: "bedroom_ibvae_h64_mss"
     checkpoint_dir: "../savepoint/"
     epochs: 1000
     batch_size: 64
@@ -32,12 +32,13 @@ validation:
 generate:
     output_path: '../output/'
 
-EnhancedBetaTCVAE:
+ImprovedBetaTCVAE:
     input_dim: 16
-    latent_dimension: 32
+    latent_dimension: 64
     bn_momentum: 0.0005
-    kld_weight: 0.0025
+    kld_weight: 0.0005
     kld_interval: 50
+    mss: true
     sparse_num: 4
 
     embedding_dim1: 32
@@ -51,6 +52,7 @@ EnhancedBetaTCVAE:
     linear_embedding1: 32
     linear_embedding2: 16
     linear_embedding3: 4
+
 UNet3Plus:
     input_dim: 16
     bn_momentum: 0.01

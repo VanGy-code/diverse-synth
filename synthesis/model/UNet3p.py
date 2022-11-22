@@ -383,6 +383,7 @@ class UNet3Plus(BaseUNet):
         batch_idx = kwargs['batch_idx']
         reconstruct_idx = kwargs['reconstruct_idx']
         ground_truth_idx = kwargs['ground_truth_idx']
+        total_loss = kwargs['total_loss']
         loss_dict = {}
 
         batch_size, max_num_parts = ground_truth.shape[0], ground_truth.shape[1]
@@ -562,23 +563,30 @@ class UNet3Plus(BaseUNet):
 
                     error_rotation_class += torch.sum(error_mat_rotation_class * valid_mask) * 0.3 * i
                     error_size_similarity += torch.sum(error_mat_size_similarity * valid_mask) * 0.3 * i
-
+                    
+        total_loss += (error_z / (num_related + 1e-12))
         loss_dict['z_loss'] = (error_z / (num_related + 1e-12))
+        total_loss += ((error_translation_residual_x + error_translation_residual_y) / (num_related + 1e-12))
         loss_dict['distance_residual_loss'] = ((error_translation_residual_x + error_translation_residual_y) / (
                 num_related + 1e-12))
 
         if room_type == 'bedroom':
             loss_dict['distance_class_loss'] = (error_translation_class_x + error_translation_class_y) / (
-                        num_unrelated + 1e-12) * 0.1
+                        num_unrelated + 1e-12)
+            total_loss += (error_translation_class_x + error_translation_class_y) / (num_unrelated + 1e-12) * 0.1
         else:
             loss_dict['distance_class_loss'] = ((error_translation_class_x + error_translation_class_y) / (
-                    num_related + 1e-12)) * 0.1
+                    num_related + 1e-12))
+            total_loss += ((error_translation_class_x + error_translation_class_y) / (num_related + 1e-12)) * 0.1
 
         loss_dict['distance_indicator_loss'] = ((error_indicator_x + error_indicator_y) / (num_unrelated + 1e-12))
-
-        loss_dict['rotation_class_loss'] = (error_rotation_class / (num_unrelated + 1e-12)) * 0.1
+        total_loss += ((error_indicator_x + error_indicator_y) / (num_unrelated + 1e-12))
+        loss_dict['rotation_class_loss'] = (error_rotation_class / (num_unrelated + 1e-12))
+        total_loss += (error_rotation_class / (num_unrelated + 1e-12)) * 0.1
 
         loss_dict['size_similarity_loss'] = (error_size_similarity / (num_unrelated + 1e-12))
+        total_loss += (error_size_similarity / (num_unrelated + 1e-12))
 
         loss_dict['size_loss'] = (error_size / (num_related + 1e-12))
-        return loss_dict
+        total_loss += (error_size / (num_related + 1e-12))
+        return total_loss, loss_dict

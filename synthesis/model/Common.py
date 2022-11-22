@@ -183,7 +183,7 @@ class BaseVAE(nn.Module):
         return batch_ind, row_ind_list, col_ind_list
 
     @abstractmethod
-    def sample(self, latent_dim: Tensor) -> Tuple[Any, Any]:
+    def sample(self, batch_size: Tensor) -> Tuple[Any, Any]:
         raise NotImplementedError
 
     @abstractmethod

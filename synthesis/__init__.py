@@ -1,6 +1,6 @@
 import torch
 from synthesis.model.UNet3p import UNet3Plus
-from synthesis.model.EnhancedBetaTCVAE import EnhancedBetaTCVAE
+from synthesis.model.ImprovedBetaTCVAE import ImprovedBetaTCVAE
 try:
     from radam import RAdam
 except ImportError:
@@ -38,10 +38,10 @@ class NetworkBuilder:
             network_type=None,
             **kwargs
     ):
-        if network_type == "EnhancedBetaTCVAE":
-            network = EnhancedBetaTCVAE(
+        if network_type == "ImprovedBetaTCVAE":
+            network = ImprovedBetaTCVAE(
                 data_config=config["data"],
-                model_config=config["EnhancedBetaTCVAE"],
+                model_config=config["ImprovedBetaTCVAE"],
                 kernel_mask_dict=kwargs['kernel_mask_dict']
             )
         elif network_type == 'UNet3P':

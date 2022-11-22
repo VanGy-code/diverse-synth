@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from typing import List, Tuple, Any
 
 import torch
@@ -86,6 +87,7 @@ class Encoder(nn.Module):
         self.num_class = data_config["num_class"]
         self.num_each_class = data_config["num_each_class"]
         self.encoder_config = encoder_config
+        self.latent_dim = latent_dim
 
         self.kernel_mask_list = kernel_mask_list
 
@@ -163,6 +165,13 @@ class Encoder(nn.Module):
         else:
             eps = Variable(eps)
         return eps.mul(std).add_(mu)
+    
+    def sample(self, params):
+        mu = params.select(-1, 0)
+        log = params.select(-1, 1)
+        std_z = Variable(torch.randn(mu.size()).type_as(mu.data))
+        sample = std_z * torch.exp(log) + mu
+        return sample
 
     def forward(self, x):
         assert (x.shape[1] == self.num_class * self.num_each_class)
@@ -191,9 +200,9 @@ class Encoder(nn.Module):
         x = x.reshape(B, -1)
 
         if self.is_variational:
-            mu, log_var = self.condition_x(x).chunk(2, dim=1)
+            z = self.condition_x(x).view(x.size(0), self.latent_dim * 2)
 
-            return mu, log_var
+            return z
         else:
             raise NotImplementedError
 
@@ -344,9 +353,17 @@ class Decoder(nn.Module):
         x = self.decoder_blocks[2](x)
 
         return x
+    
+    def sample(self, params):
+        mu = params.select(-1, 0)
+        log = params.select(-1, 1)
+        std_z = Variable(torch.randn(mu.size()).type_as(mu.data))
+        sample = std_z * torch.exp(log) + mu
+        return sample
 
 
-class EnhancedBetaTCVAE(BaseVAE):
+
+class ImprovedBetaTCVAE(BaseVAE):
     def __init__(self, data_config, kernel_mask_dict, model_config):
         super().__init__()
         self.num_class = data_config["num_class"]
@@ -355,14 +372,17 @@ class EnhancedBetaTCVAE(BaseVAE):
         self.weight_kld = model_config['kld_weight']
         self.kld_interval = model_config['kld_interval']
         self.kernel_mask_dict = kernel_mask_dict
+        self.is_mss = model_config['mss']
 
-        self.alpha = 1.0
-        self.beta = 6.
+        self.alpha = 0.001
+        self.beta = 64.
         self.gamma = 1.
-        self.anneal_steps = 6600
-        self.num_iter = 0
-
-        self.is_mss = True
+        
+        self.normalization = Variable(torch.Tensor([np.log(2 * np.pi)]))
+        
+        # hyperparamters for prior p(z)
+        self.register_buffer('prior_params', torch.zeros(self.latent_dim, 2))
+        
 
         self.encoder = Encoder(
             data_config,
@@ -386,82 +406,109 @@ class EnhancedBetaTCVAE(BaseVAE):
         # loss functions
         self.cross_entropy_loss = nn.CrossEntropyLoss()
         self.huber_loss = nn.SmoothL1Loss(beta=0.5, reduction='mean')
+        
+    # return prior paramters wrapped in a suitable Variable
+    def _get_prior_params(self, batch_size=1):
+        expanded_size = (batch_size,) + self.prior_params.size()
+        prior_params = Variable(self.prior_params.expand(expanded_size))
+        return prior_params
+    
+    # samples from the model p(x|z)p(z)
+    def sample(self, batch_size=1):
+        prior_params = self._get_prior_params(batch_size)
+        zs = self.encoder.sample(prior_params)
+        x_params = self.decoder(zs)
+        return x_params
+        
+    
+    def _log_importance_weight_matrix(self, batch_size, dataset_size):
+        N = dataset_size
+        M = batch_size - 1
+        start_weight = (N - M) / (M * N)
+        W = torch.Tensor(batch_size, batch_size).fill_(1 / M)
+        W.view(-1)[::M + 1] = 1 / N
+        W.view(-1)[1::M + 1] = start_weight
+        W[M - 1, 0] = start_weight
+        return W.log()
+        
+    def encode(self, x):
+        x = x.view(x.size(0), 92, 16)
+        # use the encoder to get the parameters used to define q(z|x)
+        z_params = self.encoder(x).view(x.size(0), self.latent_dim, 2)
+        # sample the latent code z
+        zs = z = self.encoder.sample(z_params)
+        return zs, z_params
+    
+    def decode(self, z):
+        x_params = self.decoder(z).view(z.size(0), 92, 16)
+        xs = self.decoder.sample(x_params)
+        return xs, x_params
 
     def forward(self, x) -> List[Tensor]:
-        mu, log_var = self.encoder(x)
-        z = self.encoder.reparameterize(mu, log_var)
-        sample = self.decoder(z)
-        return [mu, log_var, z, sample]
-
-    def adjust_weight_kld(self, epoch):
-        if epoch < self.kld_interval:
-            self.weight_kld = (epoch / self.kld_interval) * self.weight_kld
-
-    def log_density_gaussion(self, x, mu, logvar):
-        norm = -0.5 * (math.log(2 * math.pi) + logvar)
-        log_density = norm - 0.5 * ((x - mu) ** 2 * torch.exp(-logvar))
-        return log_density
+        zs, z_params = self.encode(x)
+        xs, x_params = self.decode(zs)
+        return xs, x_params, zs, z_params
+    
+    def _log_density(self, sample, params=None):
+        mu = params.select(-1, 0)
+        log = params.select(-1, 1)
+        
+        c = self.normalization.type_as(sample.data)
+        inv_sigma = torch.exp(-log)
+        tmp = (sample - mu) * inv_sigma
+        return -0.5 * (tmp * tmp + 2 * log + c)
 
     def loss_function(self, **kwargs: Any):
-        if self.training:
-            self.num_iter += 1
-            self.anneal_rate = min(0 + 1 * self.num_iter / self.anneal_steps, 1)
-        else:
-            self.anneal_rate = 1.
 
         ground_truth = kwargs['ground_truth']
-        mu, log_var, z, x = kwargs['package']
+        x, x_params, zs, z_params = kwargs['package']
         dataset_size = kwargs['dataset_size']
+        total_loss = kwargs['total_loss']
 
         loss_dict = dict()
 
-        batch_size, latent_dim = z.shape
-
+        batch_size, latent_dim = zs.shape
+        prior_params = self._get_prior_params(batch_size)
+        
         # calculate log q(z|x)
-        log_q_zx = self.log_density_gaussion(z, mu, log_var).sum(dim=1)
+        log_qz_condx = self._log_density(zs, params=z_params).view(batch_size, -1).sum(dim=1)
 
         # calculate log p(z)
-        # mean and log var is 0
-        zeros = torch.zeros_like(z)
-        log_p_z = self.log_density_gaussion(z, zeros, zeros).sum(dim=1)
+        log_p_z = self._log_density(zs, params=prior_params).view(batch_size, -1).sum(dim=1)
 
         # calculate log density of a Gaussian for all combination of batch pairs of x and mu
-        mat_log_q_z = self.log_density_gaussion(
-            z.view(batch_size, 1, latent_dim),
-            mu.view(1, batch_size, latent_dim),
-            log_var.view(1, batch_size, latent_dim)
+        mat_log_q_z = self._log_density(
+            zs.view(batch_size, 1, latent_dim),
+            z_params.view(1, batch_size, latent_dim, 2)
         )
 
         # mss
         if self.is_mss:
-            start_weight = (dataset_size - batch_size + 1) / (dataset_size * (batch_size - 1))
+            # minibatch stratified sampling
+            logiw_matrix = Variable(self._log_importance_weight_matrix(batch_size, dataset_size).type_as(mat_log_q_z.data))
+            log_qz = torch.logsumexp(logiw_matrix + mat_log_q_z.sum(2), dim=1, keepdim=False)
+            log_prod_q_z = torch.logsumexp(logiw_matrix.view(batch_size, batch_size, 1) + mat_log_q_z, dim=1, keepdim=False).sum(1)
+        else:
+            log_prod_q_z = (torch.logsumexp(mat_log_q_z, dim=1, keepdim=False) - math.log(batch_size * dataset_size)).sum(1)
+            log_qz = torch.logsumexp(mat_log_q_z.sum(2), dim=1, keepdim=False) - math.log(batch_size * dataset_size)
 
-            importance_weights = torch.Tensor(batch_size, batch_size).fill_(1 / (batch_size - 1)).to(x.device)
-            importance_weights.view(-1)[::batch_size] = 1 / dataset_size
-            importance_weights.view(-1)[1::batch_size] = start_weight
-            importance_weights[batch_size - 2, 0] = start_weight
-            log_importance_weights = importance_weights.log()
+        mi_loss = (log_qz_condx - log_qz).mean()
+        tc_loss = (log_qz - log_prod_q_z).mean()
+        dw_kld_loss = (log_prod_q_z - log_p_z).mean()
 
-            mat_log_q_z += log_importance_weights.view(batch_size, batch_size, 1)
-
-        log_q_z = torch.logsumexp(mat_log_q_z.sum(2), dim=1, keepdim=False) - math.log(batch_size * dataset_size)
-        log_prod_q_z = (torch.logsumexp(mat_log_q_z, dim=1, keepdim=False) - math.log(batch_size * dataset_size)).sum(1)
-        # kld_loss = (log_prod_q_z - log_p_z).mean()
-
-        mi_loss = (log_q_zx - log_q_z).mean()
-        tc_loss = (log_q_z - log_prod_q_z).mean()
-        kld_loss = (torch.logsumexp(mat_log_q_z, dim=1, keepdim=False).sum(1) - log_p_z).mean()
-
-        loss_dict['mi_loss'] = mi_loss * self.alpha
-        loss_dict['tc_loss'] = tc_loss * self.beta * self.weight_kld
-        loss_dict['kld_loss'] = kld_loss * self.gamma * self.anneal_rate * self.weight_kld
+        loss_dict['mi_loss'] = mi_loss
+        loss_dict['tc_loss'] = tc_loss
+        loss_dict['dw_kld_loss'] = dw_kld_loss
+        
+        # total_loss += mi_loss * self.alpha + (tc_loss * self.beta + dw_kld_loss * self.gamma) * self.weight_kld
+        total_loss += mi_loss * self.alpha + (tc_loss * self.beta + dw_kld_loss * self.gamma) * self.weight_kld
 
         batch_size, max_num_parts, x_dim = ground_truth.shape[0], ground_truth.shape[1], ground_truth.shape[2]
         num_class = self.num_class
         num_each_class = self.num_each_class
         assert (max_num_parts == num_class * num_each_class)
 
-        x_prob = x[:, :, 9:]
+        x_prob = x_params[:, :, 9:]
         # Compute distance matrix
         distance_matrix = torch.zeros((batch_size, num_class, num_each_class, num_each_class))
         for b in range(batch_size):
@@ -473,11 +520,11 @@ class EnhancedBetaTCVAE(BaseVAE):
                     dim=2
                 )
 
-        batch_idx, ground_truth_idx, reconstruct_idx = EnhancedBetaTCVAE.linear_assignment_class(distance_matrix)
+        batch_idx, ground_truth_idx, reconstruct_idx = ImprovedBetaTCVAE.linear_assignment_class(distance_matrix)
 
         # (batch_size * max_num_parts, feature_dim)
         ground_truth_match = ground_truth[batch_idx, ground_truth_idx]
-        reconstruct_match = x[batch_idx, reconstruct_idx]
+        reconstruct_match = x_params[batch_idx, reconstruct_idx]
 
         # Overlap
 
@@ -490,7 +537,8 @@ class EnhancedBetaTCVAE(BaseVAE):
         # reduction = 'mean' or 'sum'
 
         class_reconstruct_loss = self.huber_loss(reconstruct_class_new, ground_truth_class) * (x_dim - 9)
-        loss_dict['class_reconstruct_loss'] = class_reconstruct_loss * 10
+        total_loss += class_reconstruct_loss * 10
+        loss_dict['class_reconstruct_loss'] = class_reconstruct_loss
 
         # Furniture Angle reconstruct loss(Cross Entropy Loss + Huber Loss)
         reconstruct_angle = reconstruct_match[:, :9]
@@ -499,10 +547,12 @@ class EnhancedBetaTCVAE(BaseVAE):
         angle_label = angle_index[:, 1]
         angle_class_loss = self.cross_entropy_loss(reconstruct_angle[angle_index[:, 0], :8], angle_label)
         angle_residual_loss = self.huber_loss(reconstruct_angle[:, -1], ground_truth_angle[:, -1])
-        loss_dict['angle_class_loss'] = angle_class_loss * 0.1
+        total_loss += angle_class_loss * 0.1
+        loss_dict['angle_class_loss'] = angle_class_loss
+        total_loss += angle_residual_loss
         loss_dict['angle_residual_loss'] = angle_residual_loss
 
-        return loss_dict, batch_idx, ground_truth_idx, reconstruct_idx
+        return total_loss, loss_dict, batch_idx, ground_truth_idx, reconstruct_idx
 
     @torch.no_grad()
     def sample(self, latent_code: Tensor) -> Tuple[Any, Any]:

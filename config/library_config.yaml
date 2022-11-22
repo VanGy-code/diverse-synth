@@ -14,7 +14,7 @@ data:
 
 training:
     splits: ["train", "val"]
-    tag: "library_ebvae_h32_mss"
+    tag: "library_ibvae_h32_mss"
     checkpoint_dir: "../savepoint"
     epochs: 1000
     batch_size: 16
@@ -32,7 +32,26 @@ validation:
 generate:
     output_path: '../output/'
 
-EnhancedBetaTCVAE:
+ImprovedBetaTCVAE:
+    input_dim: 16
+    latent_dimension: 16
+    bn_momentum: 0.0005
+    kld_weight: 0.0005
+    kld_interval: 50
+    mss: true
+    sparse_num: 4
+
+    embedding_dim1: 32
+    embedding_dim2: 48
+    embedding_dim3: 64
+
+    sparse_embedding1: 256
+    sparse_embedding2: 128
+    sparse_embedding3: 64
+
+    linear_embedding1: 32
+    linear_embedding2: 16
+    linear_embedding3: 4
     input_dim: 16
     latent_dimension: 32
     bn_momentum: 0.0005

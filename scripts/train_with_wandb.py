@@ -136,7 +136,7 @@ def main(argv):
         worker_init_fn=dataset.worker_init_fn,
         shuffle=True,
         pin_memory=True,
-        drop_last=True
+        # drop_last=True
     )
     
     print("Loaded {} training scenes".format(
@@ -177,7 +177,7 @@ def main(argv):
         # worker_init_fn=validation_dataset.worker_init_fn,
         shuffle=False,
         pin_memory=True,
-        drop_last=True
+        # drop_last=True
     )
     
     
@@ -276,28 +276,31 @@ def main(argv):
             labels_rel = batch_data_label['x_rel']
 
             package = vae(inputs_abs)
-            feature_x = unet(package[-1].detach())
-
-            vae_loss_dict, current_idx, ground_truth_idx, reconstruct_idx = vae.loss_function(
+            feature_x = unet(package[1].detach())
+            
+            total_loss = torch.zeros(1).to(device=labels_abs.device)
+            total_loss, vae_loss_dict, current_idx, ground_truth_idx, reconstruct_idx = vae.loss_function(
                 ground_truth=labels_abs,
                 package=package,
                 dataset_size=len(train_dataset),
+                total_loss=total_loss
             )
 
-            unet_loss_dict = unet.loss_function(
+            total_loss, unet_loss_dict = unet.loss_function(
                 room_type=config['data']['room_type'],
                 ground_truth=labels_rel,
                 reconstruct_x=feature_x,
                 batch_idx=current_idx,
                 reconstruct_idx=reconstruct_idx,
-                ground_truth_idx=ground_truth_idx
+                ground_truth_idx=ground_truth_idx,
+                total_loss=total_loss
             )
 
             loss_dict = {**vae_loss_dict, **unet_loss_dict}
-            total_loss = torch.zeros(1).to(device=labels_abs.device)
-            for key, value in loss_dict.items():
-                if key == 'mi_loss': continue
-                total_loss += value
+            # total_loss = torch.zeros(1).to(device=labels_abs.device)
+            # for key, value in loss_dict.items():
+            #     if key == 'mi_loss': continue
+            #     total_loss += value
             loss_dict['total_loss'] = total_loss
 
             total_loss.backward()
@@ -346,29 +349,31 @@ def main(argv):
 
             with torch.no_grad():
                 package = vae(inputs_abs)
-                feature_x = unet(package[-1].detach())
-
-                vae_loss_dict, current_idx, ground_truth_idx, reconstruct_idx = vae.loss_function(
+                feature_x = unet(package[1].detach())
+                eval_total_loss = torch.zeros(1).to(device=labels_abs.device)
+                eval_total_loss, vae_loss_dict, current_idx, ground_truth_idx, reconstruct_idx = vae.loss_function(
                     ground_truth=labels_abs,
                     package=package,
                     dataset_size=len(train_dataset),
+                    total_loss=eval_total_loss
                 )
 
-                unet_loss_dict = unet.loss_function(
+                eval_total_loss, unet_loss_dict = unet.loss_function(
                     room_type=config['data']['room_type'],
                     ground_truth=labels_rel,
                     reconstruct_x=feature_x,
                     batch_idx=current_idx,
                     reconstruct_idx=reconstruct_idx,
-                    ground_truth_idx=ground_truth_idx
+                    ground_truth_idx=ground_truth_idx,
+                    total_loss=eval_total_loss
                 )
             # Accumulate statistics and print out
             eval_loss_dict = {**vae_loss_dict, **unet_loss_dict}
-            total_loss = torch.zeros(1).to(device)
-            for key, value in eval_loss_dict.items():
-                if key == 'mi_loss': continue
-                total_loss += value
-            eval_loss_dict['total_loss'] = total_loss
+            # total_loss = torch.zeros(1).to(device)
+            # for key, value in eval_loss_dict.items():
+            #     if key == 'mi_loss': continue
+            #     total_loss += value
+            eval_loss_dict['total_loss'] = eval_total_loss
 
             # Accumulate statistics and print out
             for key in eval_loss_dict:
@@ -379,12 +384,12 @@ def main(argv):
         eval_log = {
             key: eval_stat_dict[key] / float(len(val_loader) + 1) for key in sorted(eval_stat_dict.keys())
         }
-        mean_loss = eval_stat_dict['eval_total_loss'] / float(len(val_loader) + 1)
+        mean_loss = eval_total_loss / float(len(val_loader) + 1)
         eval_log.update({"epoch": epoch, "mean_loss": mean_loss})
         wandb.log(eval_log)
         for key in sorted(eval_stat_dict.keys()):
             print(
-                'eval %s: %f | ' % (key, eval_stat_dict[key] / (len(val_loader) + 1))
+                '%s: %f | ' % (key, eval_stat_dict[key] / (len(val_loader) + 1))
                 , end=' ')
             eval_stat_dict[key] = 0
         print()
@@ -401,24 +406,23 @@ def main(argv):
             save_dict['unet_state_dict'] = unet.module.state_dict()
         except Exception:
             save_dict['unet_state_dict'] = unet.state_dict()
-
+            
+        save_dict['kernel_mask_dict'] = vae.kernel_mask_dict
+        
         if epoch % save_every == 0:
-            if args.generator_type not in ['VAE']:
-                save_dict['kernel_mask_dict'] = vae.kernel_mask_dict
             torch.save(save_dict,
                         f"{config['training']['checkpoint_dir']}/{config['training']['tag']}/checkpoint_eval{epoch}.tar")
 
         vae_optimizer_scheduler.step()
         unet_optimizer_scheduler.step()
 
-        save_dict = {
-            'vae_optimizer_state_dict': vae_optimizer.state_dict(),
-            'unet_optimizer_state_dict': unet_optimizer.state_dict(),
-        }
+        # save_dict = {
+        #     'vae_optimizer_state_dict': vae_optimizer.state_dict(),
+        #     'unet_optimizer_state_dict': unet_optimizer.state_dict(),
+        # }
 
-        if args.generator_type not in ['VAE']:
-            save_dict['kernel_mask_dict'] = vae.kernel_mask_dict
-        torch.save(save_dict, f"{config['training']['checkpoint_dir']}/{config['training']['tag']}/final.tar")
+        # save_dict['kernel_mask_dict'] = vae.kernel_mask_dict
+        # torch.save(save_dict, f"{config['training']['checkpoint_dir']}/{config['training']['tag']}/final.tar")
     wandb.finish()
 
 

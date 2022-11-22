@@ -58,32 +58,32 @@ python pickle_future_data.py
 
 - bedroom
     ```python
-    xpy preprocess_data.py --annotation_file ../config/bedroom_threed_front_splits.csv --dataset_filtering bedroom --render
+    xpy preprocess_data.py  --dataset_filtering bedroom --render
     ```
 - livingroom
     ```python
-    xpy preprocess_data.py --annotation_file ../config/livingroom_threed_front_splits.csv --dataset_filtering livingroom --render
+    xpy preprocess_data.py  --dataset_filtering livingroom --render
     ```
 - diningroom
     ```python
-    xpy preprocess_data.py  --annotation_file ../config/diningroom_threed_front_splits.csv --dataset_filtering diningroom --render
+    xpy preprocess_data.py  --dataset_filtering diningroom --render
     ```
 ## Network
 
 ### Train
 - bedroom
     ```python
-    python train_with_wandb.py --config_file ../config/bedroom_config.yaml --generator_type EnhancedBetaTCVAE --discriminator_type UNet3P
+    python train_with_wandb.py --config_file ../config/bedroom_config.yaml --generator_type ImprovedBetaTCVAE --discriminator_type UNet3P
     ```
 
 - livingroom
     ```python 
-    python train_with_wandb.py --config_file ../config/livingroom_config.yaml --generator_type EnhancedBetaTCVAE --discriminator_type UNet3P
+    python train_with_wandb.py --config_file ../config/livingroom_config.yaml --generator_type ImprovedBetaTCVAE --discriminator_type UNet3P
     ```
 
 - diningroom
     ```python 
-    python train_with_wandb.py --config_file ../config/diningroom_config.yaml --generator_type EnhancedBetaTCVAE --discriminator_type UNet3P
+    python train_with_wandb.py --config_file ../config/diningroom_config.yaml --generator_type ImprovedBetaTCVAE --discriminator_type UNet3P
     ```
 
 ## Scene Generation && Post processing
@@ -91,15 +91,15 @@ python pickle_future_data.py
 To generate rooms using:
 - bedroom
     ```python
-    python generate_scene.py --output_directory../render_scene/bedroom/ --room_type bedroom --annotation_file ../config/bedroom_threed_front_splits.csv --weight_file ../savepoint/xxx --tag xxx --render
+    python generate_scene.py --output_directory../render_scene/bedroom/ --room_type bedroom  --weight_file ../savepoint/xxx --tag xxx --render
     ```
 - livingroom
     ```python
-    python generate_scene.py --output_directory ../render_scene/livingroom/ --room_type livingroom --annotation_file ../config/livingroom_threed_front_splits.csv --weight_file ../savepoint/xxx --tag xxx --render
+    python generate_scene.py --output_directory ../render_scene/livingroom/ --room_type livingroom --weight_file ../savepoint/xxx --tag xxx --render
     ```
 - diningroom
     ```python
-    python generate_scene.py --output_directory ../render_scene/diningroom/ --room_type diningroom --annotation_file ../config/diningroom_threed_front_splits.csv --weight_file ../savepoint/xxx --tag xxx --render
+    python generate_scene.py --output_directory ../render_scene/diningroom/ --room_type diningroom --weight_file ../savepoint/xxx --tag xxx --render
     ```
     
 ### Test with Matlab
